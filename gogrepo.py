@@ -357,7 +357,7 @@ def fetch_file_info(d, fetch_md5):
         # fetch file md5
         if fetch_md5:
             if os.path.splitext(page.geturl())[1].lower() not in SKIP_MD5_FILE_EXT:
-                tmp_md5_url = page.geturl().replace('?', '.xml?')
+                tmp_md5_url = page.geturl() + '.xml'
                 try:
                     with request(tmp_md5_url) as page:
                         shelf_etree = xml.etree.ElementTree.parse(page).getroot()
@@ -549,10 +549,6 @@ def cmd_login(user, passwd):
     # fetch the login token
     with request(login_data['auth_url'], delay=0) as page:
         etree = html5lib.parse(page, namespaceHTMLElements=False)
-        # Bail if we find a request for a reCAPTCHA
-        if len(etree.findall('.//div[@class="g-recaptcha"]')) > 0:
-            error("cannot continue, gog is asking for a reCAPTCHA :(  try again in a few minutes.")
-            return
         for elm in etree.findall('.//input'):
             if elm.attrib['id'] == 'login__token':
                 login_data['login_token'] = elm.attrib['value']
@@ -622,9 +618,12 @@ def cmd_update(os_list, lang_list, skipknown, updateonly, id):
             info('fetching game product data (page %d)...' % i)
         else:
             info('fetching game product data (page %d / %d)...' % (i, json_data['totalPages']))
-        with request(api_url, args={'mediaType': media_type,
-                                    'sortBy': 'title',  # sort order
-                                    'page': str(i)}, delay=0) as data_request:
+
+        url = api_url + "?" + urlencode({'mediaType': media_type,
+                                         'sortBy': 'title',
+                                         'page': str(i)})
+
+        with request(url, delay=0) as data_request:
             reader = codecs.getreader("utf-8")
             try:
                 json_data = json.load(reader(data_request))
